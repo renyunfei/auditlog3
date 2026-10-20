@@ -18,3 +18,8 @@ mkdir build && cd build && cmake .. && make
 ```
 
 协议定义见 `src/audit_proto.h`。
+
+启动时不会覆盖已有的 socket 路径（包括普通文件和残留 socket）。若进程异常退出，
+请先确认没有实例使用这些路径，再手动删除残留 socket 后重启。
+
+构建后执行回归测试：`ctest --test-dir build --output-on-failure`。

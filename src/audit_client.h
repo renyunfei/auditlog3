@@ -9,8 +9,9 @@ int audit_client_write(const char *write_sock, int level,
 
 /*
  * Read up to count entries starting at entry index offset. cb is invoked per
- * entry (return non-zero to stop). *next receives the offset to continue
- * from and *more whether further entries exist (both may be NULL).
+ * entry (return non-zero to stop after consuming that entry). *next receives
+ * the offset after the last consumed entry, including when cb stops early.
+ * *more indicates whether further entries exist (both outputs may be NULL).
  * Returns 0 on success, -1 on error (errno set, or EPROTO for a bad reply).
  */
 typedef int (*audit_read_cb)(const struct audit_entry *e, void *priv);

@@ -71,10 +71,19 @@ static int bind_unix(int type, const char *path, mode_t mode)
 	if (fd < 0)
 		return -1;
 
-	unlink(path);
-	if (bind(fd, (struct sockaddr *)&sa, sizeof(sa)) < 0 ||
-	    chmod(path, mode) < 0) {
+	/* Let bind reject occupied paths, including stale sockets. Never remove
+	 * files or disconnect another instance just to claim its pathname. */
+	if (bind(fd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+		int err = errno;
 		close(fd);
+		errno = err;
+		return -1;
+	}
+	if (chmod(path, mode) < 0) {
+		int err = errno;
+		close(fd);
+		unlink(path);
+		errno = err;
 		return -1;
 	}
 	return fd;
