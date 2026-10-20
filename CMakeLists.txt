@@ -26,3 +26,13 @@ add_executable(audit-read tools/audit_read.c)
 target_link_libraries(audit-read auditclient)
 
 install(TARGETS auditd audit-write audit-read RUNTIME DESTINATION bin)
+
+include(CTest)
+if(BUILD_TESTING)
+  add_executable(audit-tests tests/audit_test.c src/audit_server.c src/audit_store.c)
+  target_link_libraries(audit-tests auditclient)
+  foreach(check malformed pagination sockets store)
+    add_test(NAME audit-${check} COMMAND audit-tests ${check})
+    set_tests_properties(audit-${check} PROPERTIES TIMEOUT 10)
+  endforeach()
+endif()

@@ -142,6 +142,13 @@ int audit_store_read(struct audit_store *s, uint32_t offset,
 		n++;
 	}
 
-	fclose(f);
+	if (ferror(f)) {
+		int err = errno;
+		fclose(f);
+		errno = err;
+		return -1;
+	}
+	if (fclose(f) != 0)
+		return -1;
 	return (int)n;
 }

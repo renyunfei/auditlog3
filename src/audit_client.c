@@ -85,6 +85,7 @@ int audit_client_read(const char *read_sock, unsigned int offset,
 	struct blob_attr *attr, *tb[__P_MAX], *pos;
 	ssize_t n;
 	size_t rem;
+	unsigned int consumed = 0;
 	int fd, ret = -1;
 
 	buf = malloc(AUDIT_MAX_PACKET);
@@ -108,7 +109,8 @@ int audit_client_read(const char *read_sock, unsigned int offset,
 		goto out_close;
 
 	attr = (struct blob_attr *)buf;
-	if (n < (ssize_t)sizeof(*attr) || blob_pad_len(attr) > (size_t)n ||
+	if (n < (ssize_t)sizeof(*attr) || blob_raw_len(attr) < sizeof(*attr) ||
+	    blob_pad_len(attr) > (size_t)n ||
 	    blobmsg_parse(reply_policy, __P_MAX, tb, blob_data(attr), blob_len(attr)) < 0 ||
 	    !tb[P_STATUS] || !tb[P_NEXT] || !tb[P_MORE] || !tb[P_ENTRIES]) {
 		errno = EPROTO;
@@ -139,8 +141,15 @@ int audit_client_read(const char *read_sock, unsigned int offset,
 		e.level = (int32_t)blobmsg_get_u32(et[E_LEVEL]);
 		snprintf(e.source, sizeof(e.source), "%s", blobmsg_get_string(et[E_SOURCE]));
 		snprintf(e.message, sizeof(e.message), "%s", blobmsg_get_string(et[E_MESSAGE]));
-		if (cb && cb(&e, priv))
+		consumed++;
+		if (cb && cb(&e, priv)) {
+			/* The callback consumed this entry, but not the rest of the page. */
+			if (next)
+				*next = offset + consumed;
+			if (more && rem > blob_pad_len(pos))
+				*more = 1;
 			break;
+		}
 	}
 	ret = 0;
 
